@@ -1,0 +1,2077 @@
+-- Language: Lua, Environment: Delta Executor Mobile (Luau)
+-- Target: Roblox Mobile Games
+-- Features: Google Color Picker, Sky Lighting Tint, Auto-Teleport to Target with Speed Slider, Fixed Fly & TriggerBot
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+if not PlayerGui then return end
+
+if PlayerGui:FindFirstChild("ZeroXubHub") then
+    PlayerGui.ZeroXubHub:Destroy()
+end
+
+local ConfigFolder = "ZeroXubConfigs"
+if not isfolder(ConfigFolder) then
+    makefolder(ConfigFolder)
+end
+
+local GlobalBoomboxSound = Instance.new("Sound")
+GlobalBoomboxSound.Name = "ZeroXub_BoomboxMusic"
+GlobalBoomboxSound.Parent = Workspace
+GlobalBoomboxSound.Looped = true
+GlobalBoomboxSound.Volume = 0.5
+
+local CurrentLang = "RU"
+
+local Translations = {
+    RU = {
+        Title = "ZERO XUB // MASTER HUB",
+        TabCombat = "⚔️ Бой",
+        TabVisuals = "👁️ Визуалы",
+        TabMovement = "🚀 Движение",
+        TabWorld = "🌅 Графика",
+        TabParticles = "✨ Частицы",
+        TabPlayers = "🎯 Игроки",
+        TabMusic = "🎵 Музыка",
+        TabConfigs = "💾 Конфиги",
+        TabSettings = "⚙️ Настройки",
+        
+        AimbotHeader = "АВТО-НАЦЕЛИВАНИЕ (AIMBOT)",
+        EnableAimbot = "Включить Aimbot",
+        WallCheck = "Проверка стен (Wall Check)",
+        FOVCircle = "Круг наводки (FOV Circle)",
+        TargetBoneHeader = "ЧАСТЬ ТЕЛА ДЛЯ НАВЕДЕНИЯ",
+        BoneHead = "Голова",
+        BoneTorso = "Торс",
+        AimSpeedHeader = "СКОРОСТЬ НАЦЕЛИВАНИЯ",
+        SpeedFast = "Быстрый",
+        SpeedSmooth = "Плавный",
+        SpeedSlow = "Медленный",
+        SpinBotHeader = "АВТО-ВРАЩЕНИЕ (SPINBOT)",
+        EnableSpinBot = "Включить SpinBot",
+        TriggerBotHeader = "АВТО-ВЫСТРЕЛ (TRIGGERBOT)",
+        EnableTriggerBot = "Включить TriggerBot",
+        
+        ESPHeader = "ЭКРАННЫЕ ВИЗУАЛЫ (ESP)",
+        ESPNameTags = "Ники и Дистанция (NameTags)",
+        ESPHighlight = "ESP Подсветка (Highlight)",
+        ESPColorHeader = "ЦВЕТ ESP (ПАЛИТРА)",
+        
+        FlyHeader = "РЕЖИМ ПОЛЕТА (FLY)",
+        EnableFly = "Включить Fly (Полет)",
+        PhysicsHeader = "ФИЗИКА И ЗАЩИТА",
+        NoClip = "Проход сквозь стены (NoClip)",
+        AntiKnockback = "Анти-отталкивание (Anti-Push)",
+        AntiFling = "Защита от флинга (Anti-Fling)",
+        InfJump = "Бесконечный прыжок (Inf Jump)",
+        BHop = "Авто-прыжки (BunnyHop)",
+        SpeedJumpHeader = "СКОРОСТЬ И ПРЫЖОК",
+        Reset = "Сброс",
+        
+        MusicHeader = "БУМБОКС ПЛЕЕР ПО КОДУ (MUSIC CODES)",
+        MusicPlaceholder = "Введите ID аудио или ссылку...",
+        PlayMusic = "▶ Воспроизвести / Пауза",
+        StopMusic = "⏹ Остановить",
+        VolumeTitle = "Громкость",
+        PresetsHeader = "ПОПУЛЯРНЫЕ КОДЫ ТРЕКОВ",
+        
+        StretchHeader = "ПОЛЗУНОК РАСТЯГА ЭКРАНА",
+        StretchTitle = "Растяг",
+        ShadersHeader = "ШЕЙДЕРЫ И НОЧЬ",
+        EnableShaders = "Красивый режим (Shaders)",
+        NightMode = "Режим ночи (Night Mode)",
+        WorldColorHeader = "ЦВЕТ ОКРУЖЕНИЯ И ТУМАНА",
+        EnableWorldColor = "Включить цвет мира",
+        SkyHeader = "НАСТРОЙКА НЕБА И АТМОСФЕРЫ",
+        EnableCustomSky = "Включить кастомное небо",
+        SkyPresetHeader = "ПРЕСЕТЫ НЕБА (ФОТО / ТИПЫ)",
+        SkyColorHeader = "ЦВЕТ НЕБА (ПАЛИТРА GOOGLE)",
+        SkyLightingHeader = "ПОДСВЕТКА НЕБА (ATMOSPHERE TINT)",
+        EnableSkyLighting = "Включить подсветку неба",
+        SkyLightingColorHeader = "ЦВЕТ ПОДСВЕТКИ НЕБА",
+        
+        ParticleHeader = "УПРАВЛЕНИЕ ЧАСТИЦАМИ",
+        EnableParticles = "Включить частицы у персонажа",
+        SelectParticleType = "ТИП ЧАСТИЦ",
+        ParticleColorHeader = "ЦВЕТ ЧАСТИЦ (ПАЛИТРА)",
+        
+        TeleportHeader = "ТЕЛЕПОРТАЦИЯ К ИГРОКАМ",
+        TargetNotSelected = "Цель: не выбрана",
+        TargetSelected = "Цель: ",
+        RefreshList = "Обновить список игроков",
+        TeleportToTarget = "Телепортироваться к цели (1 раз)",
+        AutoTeleportTarget = "Авто-телепорт к жертве",
+        TP darfHeader = "СКОРОСТЬ АВТО-ТЕЛЕПОРТА",
+        TPSpeedTitle = "Скорость погони",
+        
+        ConfigHeader = "УПРАВЛЕНИЕ КОНФИГАМИ",
+        ConfigPlaceholder = "Введите имя конфига...",
+        SaveConfig = "Создать / Сохранить конфиг",
+        LoadConfig = "Загрузить выбранный",
+        DeleteConfig = "Удалить конфиг",
+        SavedConfigsHeader = "СОХРАНЕННЫЕ ФАЙЛЫ",
+        
+        UtilsHeader = "УТИЛИТЫ И СЕРВЕР",
+        Rejoin = "Перезайти на сервер",
+        ServerHop = "Сменить сервер",
+        AntiAFK = "Включить Anti-AFK",
+        
+        LangHeader = "ВЫБОР ЯЗЫКА (LANGUAGE)",
+        UIThemeHeader = "ЦВЕТ АКЦЕНТОВ (ACCENT COLOR)",
+        UITextColorHeader = "ЦВЕТ ТЕКСТА МЕНЮ (TEXT COLOR)",
+        MenuBGHeader = "НАСТРОЙКА ФОНА МЕНЮ (MENU BACKGROUND)",
+        MenuBGTransparency = "Прозрачность меню"
+    },
+    EN = {
+        Title = "ZERO XUB // MASTER HUB",
+        TabCombat = "⚔️ Combat",
+        TabVisuals = "👁️ Visuals",
+        TabMovement = "🚀 Movement",
+        TabWorld = "🌅 Graphics",
+        TabParticles = "✨ Particles",
+        TabPlayers = "🎯 Players",
+        TabMusic = "🎵 Music",
+        TabConfigs = "💾 Configs",
+        TabSettings = "⚙️ Settings",
+        
+        AimbotHeader = "AIMBOT SETTINGS",
+        EnableAimbot = "Enable Aimbot",
+        WallCheck = "Wall Check",
+        FOVCircle = "FOV Circle",
+        TargetBoneHeader = "TARGET BONE",
+        BoneHead = "Head",
+        BoneTorso = "Torso",
+        AimSpeedHeader = "AIMBOT SPEED",
+        SpeedFast = "Fast",
+        SpeedSmooth = "Smooth",
+        SpeedSlow = "Slow",
+        SpinBotHeader = "SPINBOT",
+        EnableSpinBot = "Enable SpinBot",
+        TriggerBotHeader = "TRIGGERBOT",
+        EnableTriggerBot = "Enable TriggerBot",
+        
+        ESPHeader = "VISUALS (ESP)",
+        ESPNameTags = "NameTags & Distance",
+        ESPHighlight = "ESP Highlight",
+        ESPColorHeader = "ESP COLOR PALETTE",
+        
+        FlyHeader = "FLY MODE",
+        EnableFly = "Enable Fly",
+        PhysicsHeader = "PHYSICS & PROTECTION",
+        NoClip = "NoClip (Pass Walls)",
+        AntiKnockback = "Anti-Knockback (No Push)",
+        AntiFling = "Anti-Fling",
+        InfJump = "Infinite Jump",
+        BHop = "BunnyHop",
+        SpeedJumpHeader = "SPEED & JUMP",
+        Reset = "Reset",
+        
+        MusicHeader = "BOOMBOX CODE PLAYER",
+        MusicPlaceholder = "Enter audio ID or URL...",
+        PlayMusic = "▶ Play / Pause",
+        StopMusic = "⏹ Stop",
+        VolumeTitle = "Volume",
+        PresetsHeader = "POPULAR TRACK CODES",
+        
+        StretchHeader = "SCREEN STRETCH SCALE",
+        StretchTitle = "Stretch",
+        ShadersHeader = "SHADERS & NIGHT",
+        EnableShaders = "Ultra Shaders",
+        NightMode = "Night Mode",
+        WorldColorHeader = "WORLD & FOG COLOR TINT",
+        EnableWorldColor = "Enable World Color Tint",
+        SkyHeader = "SKY & ATMOSPHERE SETTINGS",
+        EnableCustomSky = "Enable Custom Sky",
+        SkyPresetHeader = "SKY PRESETS (PHOTO / THEME)",
+        SkyColorHeader = "SKY COLOR (GOOGLE PALETTE)",
+        SkyLightingHeader = "SKY LIGHTING TINT",
+        EnableSkyLighting = "Enable Sky Lighting Tint",
+        SkyLightingColorHeader = "SKY LIGHTING COLOR",
+        
+        ParticleHeader = "PARTICLE SYSTEM",
+        EnableParticles = "Enable Aura Particles",
+        SelectParticleType = "PARTICLE TYPE",
+        ParticleColorHeader = "PARTICLE COLOR PALETTE",
+        
+        TeleportHeader = "PLAYER TELEPORT",
+        TargetNotSelected = "Target: None",
+        TargetSelected = "Target: ",
+        RefreshList = "Refresh Player List",
+        TeleportToTarget = "Teleport to Target",
+        AutoTeleportTarget = "Auto-Teleport to Target",
+        TPSpeedTitle = "Teleport Chase Speed",
+        
+        ConfigHeader = "CONFIG MANAGEMENT",
+        ConfigPlaceholder = "Enter config name...",
+        SaveConfig = "Create / Save Config",
+        LoadConfig = "Load Selected",
+        DeleteConfig = "Delete Config",
+        SavedConfigsHeader = "SAVED FILES",
+        
+        UtilsHeader = "SERVER UTILITIES",
+        Rejoin = "Rejoin Server",
+        ServerHop = "Server Hop",
+        AntiAFK = "Enable Anti-AFK",
+        
+        LangHeader = "SELECT LANGUAGE",
+        UIThemeHeader = "ACCENT COLOR",
+        UITextColorHeader = "TEXT COLOR",
+        MenuBGHeader = "MENU BACKGROUND CUSTOMIZER",
+        MenuBGTransparency = "Background Transparency"
+    }
+}
+
+local function T(key)
+    return (Translations[CurrentLang] and Translations[CurrentLang][key]) or Translations["RU"][key] or key
+end
+
+local AimbotEnabled = false
+local WallCheckEnabled = true
+local AimbotSpeedMode = "Smooth"
+local AimbotTargetBone = "Head"
+local UseFOVCircle = true
+local FOVRadius = 120
+
+local TriggerBotEnabled = false
+local LastTriggerTime = 0
+local SpinBotEnabled = false
+local SpinSpeed = 60
+
+local FlyEnabled = false
+local FlySpeed = 50
+local BodyVelocity
+local InfJumpEnabled = false
+local BHopEnabled = false
+
+local AntiKnockbackEnabled = false
+local AntiFlingEnabled = false
+
+local ESPEnabled = false
+local ESPNamesEnabled = true
+local CurrentESPColor = Color3.fromRGB(0, 220, 255)
+
+local WorldColorEnabled = false
+local CurrentWorldColor = Color3.fromRGB(150, 0, 255)
+
+local CustomSkyEnabled = false
+local CurrentSkyColor = Color3.fromRGB(66, 135, 245)
+local CurrentSkyPreset = "Anime"
+local SkyLightingEnabled = false
+local CurrentSkyLightingColor = Color3.fromRGB(66, 135, 245)
+
+local AutoTeleportEnabled = false
+local TeleportChaseSpeed = 0.5 -- 0.1 мгновенно, 1 плавно
+
+local ParticlesEnabled = false
+local CurrentParticleType = "Sparkles" 
+local CurrentParticleColor = Color3.fromRGB(0, 255, 200)
+
+local CurrentThemeAccent = Color3.fromRGB(0, 220, 255)
+local CurrentTextColor = Color3.fromRGB(255, 255, 255)
+local CurrentMenuBGColor = Color3.fromRGB(8, 8, 12)
+local MenuBGTransparency = 0.0
+
+local StretchScale = 1.0
+local NoClipEnabled = false
+
+local SelectedPlayerName = nil
+local SelectedConfigName = nil
+
+local ESPHighlights = {}
+local ESPNameTags = {}
+local UIThemeAccents = {}
+local UITextLabels = {}
+local TranslationElements = {}
+local ActiveParticleObject = nil
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ZeroXubHub"
+ScreenGui.Parent = PlayerGui
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+ScreenGui.DisplayOrder = 999999999
+
+local FOVGuiFrame = Instance.new("Frame")
+FOVGuiFrame.Name = "FOVCircleFrame"
+FOVGuiFrame.Parent = ScreenGui
+FOVGuiFrame.BackgroundTransparency = 1
+FOVGuiFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+FOVGuiFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+FOVGuiFrame.Size = UDim2.new(0, FOVRadius * 2, 0, FOVRadius * 2)
+FOVGuiFrame.Visible = false
+FOVGuiFrame.ZIndex = 100
+
+local FOVStroke = Instance.new("UIStroke", FOVGuiFrame)
+FOVStroke.Color = CurrentThemeAccent
+FOVStroke.Thickness = 1.5
+FOVStroke.Transparency = 0.3
+Instance.new("UICorner", FOVGuiFrame).CornerRadius = UDim.new(1, 0)
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Parent = ScreenGui
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+ToggleBtn.Position = UDim2.new(0, 15, 0, 150)
+ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.Text = "ZX"
+ToggleBtn.TextColor3 = CurrentThemeAccent
+ToggleBtn.TextSize = 18
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+ToggleBtn.ZIndex = 1000
+
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 25)
+local tStroke = Instance.new("UIStroke", ToggleBtn)
+tStroke.Color = CurrentThemeAccent
+tStroke.Thickness = 2
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = CurrentMenuBGColor
+MainFrame.BackgroundTransparency = MenuBGTransparency
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -180)
+MainFrame.Size = UDim2.new(0, 420, 0, 360)
+MainFrame.Visible = true
+MainFrame.ClipsDescendants = true
+MainFrame.ZIndex = 500
+
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(30, 30, 40)
+MainStroke.Thickness = 1.5
+
+local MainGradient = Instance.new("UIGradient", MainFrame)
+MainGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 15, 20)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 5, 8))
+})
+MainGradient.Rotation = 45
+
+local Header = Instance.new("Frame")
+Header.Parent = MainFrame
+Header.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
+Header.Size = UDim2.new(1, 0, 0, 40)
+Header.Active = true
+Header.ZIndex = 501
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 14)
+
+local HeaderTitle = Instance.new("TextLabel")
+HeaderTitle.Parent = Header
+HeaderTitle.BackgroundTransparency = 1
+HeaderTitle.Position = UDim2.new(0, 16, 0, 0)
+HeaderTitle.Size = UDim2.new(1, -32, 1, 0)
+HeaderTitle.Font = Enum.Font.GothamBold
+HeaderTitle.Text = T("Title")
+HeaderTitle.TextColor3 = CurrentThemeAccent
+HeaderTitle.TextSize, HeaderTitle.TextXAlignment = 12, Enum.TextXAlignment.Left
+HeaderTitle.ZIndex = 502
+
+table.insert(UIThemeAccents, HeaderTitle)
+table.insert(UIThemeAccents, ToggleBtn)
+table.insert(UIThemeAccents, tStroke)
+
+local dragging, dragStart, startPos
+Header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+local Sidebar = Instance.new("Frame")
+Sidebar.Parent = MainFrame
+Sidebar.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
+Sidebar.Position = UDim2.new(0, 0, 0, 40)
+Sidebar.Size = UDim2.new(0, 115, 1, -40)
+Sidebar.ZIndex = 501
+
+local SidebarLayout = Instance.new("UIListLayout", Sidebar)
+SidebarLayout.Padding = UDim.new(0, 3)
+SidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+SidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+local ContentArea = Instance.new("Frame")
+ContentArea.Parent = MainFrame
+ContentArea.BackgroundTransparency = 1
+ContentArea.Position = UDim2.new(0, 125, 0, 46)
+ContentArea.Size = UDim2.new(1, -135, 1, -52)
+ContentArea.ClipsDescendants = true
+ContentArea.ZIndex = 501
+
+local Tabs = {}
+local TabButtons = {}
+
+local function CreateTabContent(name)
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Name = name
+    scroll.Parent = ContentArea
+    scroll.BackgroundTransparency = 1
+    scroll.Size = UDim2.new(1, 0, 1, 0)
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 1150)
+    scroll.ScrollBarThickness = 3
+    scroll.ScrollBarImageColor3 = CurrentThemeAccent
+    scroll.Visible = false
+    scroll.ZIndex = 502
+    
+    table.insert(UIThemeAccents, scroll)
+    
+    local layout = Instance.new("UIListLayout", scroll)
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    
+    Tabs[name] = scroll
+    return scroll
+end
+
+local function AddHeaderLabel(parent, translationKey)
+    local lbl = Instance.new("TextLabel")
+    lbl.Parent = parent
+    lbl.BackgroundTransparency = 1
+    lbl.Size = UDim2.new(1, 0, 0, 20)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.Text = T(translationKey)
+    lbl.TextColor3 = Color3.fromRGB(140, 140, 160)
+    lbl.TextSize = 10
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.ZIndex = 503
+    
+    table.insert(TranslationElements, {Obj = lbl, Key = translationKey})
+    return lbl
+end
+
+-- Гугл палитра цветов
+local function CreateGoogleColorPicker(parent, defaultColor, onColorChanged)
+    local Container = Instance.new("Frame")
+    Container.Parent = parent
+    Container.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+    Container.Size = UDim2.new(1, 0, 0, 190)
+    Container.ZIndex = 503
+    Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 8)
+    
+    local h, s, v = defaultColor:ToHSV()
+
+    local PreviewBox = Instance.new("Frame")
+    PreviewBox.Parent = Container
+    PreviewBox.BackgroundColor3 = defaultColor
+    PreviewBox.Position = UDim2.new(0, 8, 0, 8)
+    PreviewBox.Size = UDim2.new(0, 75, 0, 80)
+    PreviewBox.ZIndex = 504
+    Instance.new("UICorner", PreviewBox).CornerRadius = UDim.new(0, 6)
+
+    local SatValBox = Instance.new("ImageButton")
+    SatValBox.Parent = Container
+    SatValBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+    SatValBox.AutoButtonColor = false
+    SatValBox.Position = UDim2.new(0, 91, 0, 8)
+    SatValBox.Size = UDim2.new(1, -99, 0, 80)
+    SatValBox.Image = ""
+    SatValBox.ZIndex = 504
+    Instance.new("UICorner", SatValBox).CornerRadius = UDim.new(0, 6)
+
+    local SVGradient = Instance.new("UIGradient", SatValBox)
+    SVGradient.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(0, 0, 0))
+
+    local SVIndicator = Instance.new("Frame")
+    SVIndicator.Parent = SatValBox
+    SVIndicator.AnchorPoint = Vector2.new(0.5, 0.5)
+    SVIndicator.Size = UDim2.new(0, 14, 0, 14)
+    SVIndicator.Position = UDim2.new(s, 0, 1 - v, 0)
+    SVIndicator.BackgroundTransparency = 1
+    SVIndicator.ZIndex = 506
+    local svStroke = Instance.new("UIStroke", SVIndicator)
+    svStroke.Color = Color3.new(1, 1, 1)
+    svStroke.Thickness = 2
+    Instance.new("UICorner", SVIndicator).CornerRadius = UDim.new(1, 0)
+
+    local HueSlider = Instance.new("ImageButton")
+    HueSlider.Parent = Container
+    HueSlider.AutoButtonColor = false
+    HueSlider.Position = UDim2.new(0, 8, 0, 98)
+    HueSlider.Size = UDim2.new(1, -16, 0, 24)
+    HueSlider.Image = ""
+    HueSlider.BackgroundColor3 = Color3.new(1, 1, 1)
+    HueSlider.ZIndex = 504
+    Instance.new("UICorner", HueSlider).CornerRadius = UDim.new(0, 6)
+
+    local HueGradient = Instance.new("UIGradient", HueSlider)
+    HueGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
+        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
+        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 255)),
+        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
+        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0))
+    })
+
+    local HueIndicator = Instance.new("Frame")
+    HueIndicator.Parent = HueSlider
+    HueIndicator.AnchorPoint = Vector2.new(0.5, 0.5)
+    HueIndicator.Size = UDim2.new(0, 8, 1, 4)
+    HueIndicator.Position = UDim2.new(h, 0, 0.5, 0)
+    HueIndicator.BackgroundColor3 = Color3.new(1, 1, 1)
+    HueIndicator.ZIndex = 505
+    Instance.new("UICorner", HueIndicator).CornerRadius = UDim.new(0, 4)
+
+    local InfoPanel = Instance.new("Frame")
+    InfoPanel.Parent = Container
+    InfoPanel.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
+    InfoPanel.Position = UDim2.new(0, 8, 0, 128)
+    InfoPanel.Size = UDim2.new(1, -16, 0, 54)
+    InfoPanel.ZIndex = 504
+    Instance.new("UICorner", InfoPanel).CornerRadius = UDim.new(0, 6)
+
+    local HexLabel = Instance.new("TextLabel")
+    HexLabel.Parent = InfoPanel
+    HexLabel.BackgroundTransparency = 1
+    HexLabel.Position = UDim2.new(0, 8, 0, 4)
+    HexLabel.Size = UDim2.new(1, -16, 0, 22)
+    HexLabel.Font = Enum.Font.GothamBold
+    HexLabel.Text = "HEX: #4287f5"
+    HexLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
+    HexLabel.TextSize = 10
+    HexLabel.TextXAlignment = Enum.TextXAlignment.Left
+    HexLabel.ZIndex = 505
+
+    local FormatLabel = Instance.new("TextLabel")
+    FormatLabel.Parent = InfoPanel
+    FormatLabel.BackgroundTransparency = 1
+    FormatLabel.Position = UDim2.new(0, 8, 0, 26)
+    FormatLabel.Size = UDim2.new(1, -16, 0, 22)
+    FormatLabel.Font = Enum.Font.Gotham
+    FormatLabel.Text = "RGB: 66, 135, 245  |  HSV: 217°, 73%, 96%"
+    FormatLabel.TextColor3 = Color3.fromRGB(140, 140, 165)
+    FormatLabel.TextSize = 9
+    FormatLabel.TextXAlignment = Enum.TextXAlignment.Left
+    FormatLabel.ZIndex = 505
+
+    local function ApplyColorUpdate()
+        local finalColor = Color3.fromHSV(h, s, v)
+        PreviewBox.BackgroundColor3 = finalColor
+        SatValBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+        
+        local r = math.floor(finalColor.R * 255)
+        local g = math.floor(finalColor.G * 255)
+        local b = math.floor(finalColor.B * 255)
+        HexLabel.Text = string.format("HEX: #%02X%02X%02X", r, g, b)
+        FormatLabel.Text = string.format("RGB: %d, %d, %d  |  HSV: %d°, %d%%, %d%%", r, g, b, math.floor(h * 360), math.floor(s * 100), math.floor(v * 100))
+        
+        onColorChanged(finalColor)
+    end
+
+    local updatingSV = false
+    local updatingHue = false
+
+    local function LockParentScroll(lock)
+        if parent:IsA("ScrollingFrame") then
+            parent.ScrollingEnabled = not lock
+        end
+    end
+
+    SatValBox.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            updatingSV = true
+            LockParentScroll(true)
+        end
+    end)
+
+    HueSlider.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            updatingHue = true
+            LockParentScroll(true)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if updatingSV or updatingHue then
+                updatingSV = false
+                updatingHue = false
+                LockParentScroll(false)
+            end
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            if updatingSV then
+                local absPos = SatValBox.AbsolutePosition
+                local absSize = SatValBox.AbsoluteSize
+                s = math.clamp((input.Position.X - absPos.X) / absSize.X, 0, 1)
+                v = math.clamp(1 - ((input.Position.Y - absPos.Y) / absSize.Y), 0, 1)
+                SVIndicator.Position = UDim2.new(s, 0, 1 - v, 0)
+                ApplyColorUpdate()
+            elseif updatingHue then
+                local absPos = HueSlider.AbsolutePosition
+                local absSize = HueSlider.AbsoluteSize
+                h = math.clamp((input.Position.X - absPos.X) / absSize.X, 0, 1)
+                HueIndicator.Position = UDim2.new(h, 0, 0.5, 0)
+                ApplyColorUpdate()
+            end
+        end
+    end)
+
+    ApplyColorUpdate()
+    return Container
+end
+
+local function CreateToggle(parent, textKey, defaultState, callback)
+    local state = defaultState
+    local btn = Instance.new("TextButton")
+    btn.Parent = parent
+    btn.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    btn.Size = UDim2.new(1, 0, 0, 34)
+    btn.AutoButtonColor = false
+    btn.Text = ""
+    btn.ZIndex = 503
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    
+    local label = Instance.new("TextLabel")
+    label.Parent = btn
+    label.BackgroundTransparency = 1
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Size = UDim2.new(0.7, 0, 1, 0)
+    label.Font = Enum.Font.GothamMedium
+    label.Text = T(textKey)
+    label.TextColor3 = CurrentTextColor
+    label.TextSize = 11
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.ZIndex = 504
+    
+    table.insert(UITextLabels, label)
+    table.insert(TranslationElements, {Obj = label, Key = textKey})
+    
+    local indicator = Instance.new("Frame")
+    indicator.Parent = btn
+    indicator.Position = UDim2.new(1, -32, 0.5, -7)
+    indicator.Size = UDim2.new(0, 22, 0, 14)
+    indicator.BackgroundColor3 = state and Color3.fromRGB(0, 200, 120) or Color3.fromRGB(40, 40, 50)
+    indicator.ZIndex = 504
+    Instance.new("UICorner", indicator).CornerRadius = UDim.new(1, 0)
+    
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        indicator.BackgroundColor3 = state and Color3.fromRGB(0, 200, 120) or Color3.fromRGB(40, 40, 50)
+        callback(state)
+    end)
+end
+
+local function CreateActionBtn(parent, textKey, callback)
+    local btn = Instance.new("TextButton")
+    btn.Parent = parent
+    btn.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+    btn.Size = UDim2.new(1, 0, 0, 32)
+    btn.Font = Enum.Font.GothamMedium
+    btn.Text = T(textKey)
+    btn.TextColor3 = CurrentThemeAccent
+    btn.TextSize = 11
+    btn.ZIndex = 503
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    btn.MouseButton1Click:Connect(callback)
+    
+    table.insert(UIThemeAccents, btn)
+    table.insert(TranslationElements, {Obj = btn, Key = textKey})
+    return btn
+end
+
+-- COMBAT TAB
+local TabCombat = CreateTabContent("CombatTab")
+AddHeaderLabel(TabCombat, "AimbotHeader")
+CreateToggle(TabCombat, "EnableAimbot", false, function(v) AimbotEnabled = v end)
+CreateToggle(TabCombat, "WallCheck", true, function(v) WallCheckEnabled = v end)
+CreateToggle(TabCombat, "FOVCircle", true, function(v)
+    UseFOVCircle = v
+    FOVGuiFrame.Visible = v
+end)
+
+AddHeaderLabel(TabCombat, "TargetBoneHeader")
+local boneRow = Instance.new("Frame")
+boneRow.Parent = TabCombat
+boneRow.BackgroundTransparency = 1
+boneRow.Size = UDim2.new(1, 0, 0, 28)
+boneRow.ZIndex = 503
+local bLayout = Instance.new("UIListLayout", boneRow)
+bLayout.FillDirection = Enum.FillDirection.Horizontal
+bLayout.Padding = UDim.new(0, 4)
+
+for _, boneData in ipairs({{Key="BoneHead", Val="Head"}, {Key="BoneTorso", Val="HumanoidRootPart"}}) do
+    local bBtn = Instance.new("TextButton")
+    bBtn.Parent = boneRow
+    bBtn.BackgroundColor3 = (boneData.Val == AimbotTargetBone) and Color3.fromRGB(30, 30, 45) or Color3.fromRGB(15, 15, 22)
+    bBtn.Size = UDim2.new(0.5, -2, 1, 0)
+    bBtn.Font = Enum.Font.GothamBold
+    bBtn.Text = T(boneData.Key)
+    bBtn.TextColor3 = (boneData.Val == AimbotTargetBone) and CurrentThemeAccent or CurrentTextColor
+    bBtn.TextSize = 10
+    bBtn.ZIndex = 504
+    Instance.new("UICorner", bBtn).CornerRadius = UDim.new(0, 5)
+    
+    table.insert(TranslationElements, {Obj = bBtn, Key = boneData.Key})
+    
+    bBtn.MouseButton1Click:Connect(function()
+        AimbotTargetBone = boneData.Val
+        for _, child in ipairs(boneRow:GetChildren()) do
+            if child:IsA("TextButton") then
+                child.TextColor3 = CurrentTextColor
+                child.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+            end
+        end
+        bBtn.TextColor3 = CurrentThemeAccent
+        bBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    end)
+end
+
+AddHeaderLabel(TabCombat, "AimSpeedHeader")
+local aimSpeedRow = Instance.new("Frame")
+aimSpeedRow.Parent = TabCombat
+aimSpeedRow.BackgroundTransparency = 1
+aimSpeedRow.Size = UDim2.new(1, 0, 0, 28)
+aimSpeedRow.ZIndex = 503
+local asLayout = Instance.new("UIListLayout", aimSpeedRow)
+asLayout.FillDirection = Enum.FillDirection.Horizontal
+asLayout.Padding = UDim.new(0, 4)
+
+for _, speedData in ipairs({{Key="SpeedFast", Mode="Fast"}, {Key="SpeedSmooth", Mode="Smooth"}, {Key="SpeedSlow", Mode="Slow"}}) do
+    local mBtn = Instance.new("TextButton")
+    mBtn.Parent = aimSpeedRow
+    mBtn.BackgroundColor3 = (speedData.Mode == AimbotSpeedMode) and Color3.fromRGB(30, 30, 45) or Color3.fromRGB(15, 15, 22)
+    mBtn.Size = UDim2.new(0.33, -3, 1, 0)
+    mBtn.Font = Enum.Font.GothamBold
+    mBtn.Text = T(speedData.Key)
+    mBtn.TextColor3 = (speedData.Mode == AimbotSpeedMode) and CurrentThemeAccent or CurrentTextColor
+    mBtn.TextSize = 10
+    mBtn.ZIndex = 504
+    Instance.new("UICorner", mBtn).CornerRadius = UDim.new(0, 5)
+    
+    table.insert(TranslationElements, {Obj = mBtn, Key = speedData.Key})
+    
+    mBtn.MouseButton1Click:Connect(function()
+        AimbotSpeedMode = speedData.Mode
+        for _, child in ipairs(aimSpeedRow:GetChildren()) do
+            if child:IsA("TextButton") then
+                child.TextColor3 = CurrentTextColor
+                child.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+            end
+        end
+        mBtn.TextColor3 = CurrentThemeAccent
+        mBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    end)
+end
+
+AddHeaderLabel(TabCombat, "TriggerBotHeader")
+CreateToggle(TabCombat, "EnableTriggerBot", false, function(v) TriggerBotEnabled = v end)
+
+AddHeaderLabel(TabCombat, "SpinBotHeader")
+CreateToggle(TabCombat, "EnableSpinBot", false, function(v) SpinBotEnabled = v end)
+
+-- VISUALS TAB
+local TabVisuals = CreateTabContent("VisualsTab")
+AddHeaderLabel(TabVisuals, "ESPHeader")
+CreateToggle(TabVisuals, "ESPNameTags", true, function(v)
+    ESPNamesEnabled = v
+    if not v then
+        for _, bb in pairs(ESPNameTags) do if bb then bb:Destroy() end end
+        table.clear(ESPNameTags)
+    end
+end)
+
+CreateToggle(TabVisuals, "ESPHighlight", false, function(v)
+    ESPEnabled = v
+    if not v then
+        for _, h in pairs(ESPHighlights) do if h then h:Destroy() end end
+        table.clear(ESPHighlights)
+    end
+end)
+
+AddHeaderLabel(TabVisuals, "ESPColorHeader")
+CreateGoogleColorPicker(TabVisuals, CurrentESPColor, function(newCol)
+    CurrentESPColor = newCol
+    for _, hl in pairs(ESPHighlights) do
+        if hl then hl.FillColor = newCol end
+    end
+end)
+
+-- MOVEMENT TAB
+local TabMovement = CreateTabContent("MovementTab")
+AddHeaderLabel(TabMovement, "FlyHeader")
+CreateToggle(TabMovement, "EnableFly", false, function(v)
+    FlyEnabled = v
+    if not v and LocalPlayer.Character then
+        if BodyVelocity then BodyVelocity:Destroy() BodyVelocity = nil end
+        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.PlatformStand = false end
+    end
+end)
+
+AddHeaderLabel(TabMovement, "PhysicsHeader")
+CreateToggle(TabMovement, "NoClip", false, function(v) NoClipEnabled = v end)
+CreateToggle(TabMovement, "AntiKnockback", false, function(v) AntiKnockbackEnabled = v end)
+CreateToggle(TabMovement, "AntiFling", false, function(v) AntiFlingEnabled = v end)
+CreateToggle(TabMovement, "InfJump", false, function(v) InfJumpEnabled = v end)
+CreateToggle(TabMovement, "BHop", false, function(v) BHopEnabled = v end)
+
+AddHeaderLabel(TabMovement, "SpeedJumpHeader")
+local moveRow = Instance.new("Frame")
+moveRow.Parent = TabMovement
+moveRow.BackgroundTransparency = 1
+moveRow.Size = UDim2.new(1, 0, 0, 30)
+moveRow.ZIndex = 503
+local mLayout = Instance.new("UIListLayout", moveRow)
+mLayout.FillDirection = Enum.FillDirection.Horizontal
+mLayout.Padding = UDim.new(0, 4)
+
+local function CreateQuickStatBtn(text, cb)
+    local btn = Instance.new("TextButton")
+    btn.Parent = moveRow
+    btn.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+    btn.Size = UDim2.new(0.25, -3, 1, 0)
+    btn.Font = Enum.Font.GothamBold
+    btn.Text = text
+    btn.TextColor3 = CurrentTextColor
+    btn.TextSize = 9
+    btn.ZIndex = 504
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
+    btn.MouseButton1Click:Connect(cb)
+    table.insert(UITextLabels, btn)
+end
+
+CreateQuickStatBtn("Speed: 24", function() if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then LocalPlayer.Character.Humanoid.WalkSpeed = 24 end end)
+CreateQuickStatBtn("Speed: 36", function() if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then LocalPlayer.Character.Humanoid.WalkSpeed = 36 end end)
+CreateQuickStatBtn("Jump: 75", function() if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then LocalPlayer.Character.Humanoid.JumpPower = 75 end end)
+CreateQuickStatBtn(T("Reset"), function() if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then LocalPlayer.Character.Humanoid.WalkSpeed = 16 LocalPlayer.Character.Humanoid.JumpPower = 50 end end)
+
+-- WORLD TAB (Небо, подсветка неба и цвет мира)
+local TabWorld = CreateTabContent("WorldTab")
+
+AddHeaderLabel(TabWorld, "SkyHeader")
+CreateToggle(TabWorld, "EnableCustomSky", false, function(v)
+    CustomSkyEnabled = v
+    pcall(function()
+        if v then
+            local sky = Lighting:FindFirstChild("Zero_CustomSky") or Instance.new("Sky")
+            sky.Name = "Zero_CustomSky"
+            sky.Parent = Lighting
+            if CurrentSkyPreset == "Anime" then
+                sky.SkyboxBk = "rbxassetid://156577171" sky.SkyboxDn = "rbxassetid://156577174" sky.SkyboxFt = "rbxassetid://156577186" sky.SkyboxLf = "rbxassetid://156577178" sky.SkyboxRt = "rbxassetid://156577196" sky.SkyboxUp = "rbxassetid://156577197"
+            elseif CurrentSkyPreset == "Space" then
+                sky.SkyboxBk = "rbxassetid://153744922" sky.SkyboxDn = "rbxassetid://153744933" sky.SkyboxFt = "rbxassetid://153744949" sky.SkyboxLf = "rbxassetid://153744960" sky.SkyboxRt = "rbxassetid://153744971" sky.SkyboxUp = "rbxassetid://153744983"
+            elseif CurrentSkyPreset == "Sunset" then
+                sky.SkyboxBk = "rbxassetid://60052063" sky.SkyboxDn = "rbxassetid://60052062" sky.SkyboxFt = "rbxassetid://60052064" sky.SkyboxLf = "rbxassetid://60052065" sky.SkyboxRt = "rbxassetid://60052066" sky.SkyboxUp = "rbxassetid://60052067"
+            end
+        else
+            if Lighting:FindFirstChild("Zero_CustomSky") then Lighting.Zero_CustomSky:Destroy() end
+        end
+    end)
+end)
+
+AddHeaderLabel(TabWorld, "SkyPresetHeader")
+local skyPresetRow = Instance.new("Frame")
+skyPresetRow.Parent = TabWorld
+skyPresetRow.BackgroundTransparency = 1
+skyPresetRow.Size = UDim2.new(1, 0, 0, 28)
+skyPresetRow.ZIndex = 503
+local spLayout = Instance.new("UIListLayout", skyPresetRow)
+spLayout.FillDirection = Enum.FillDirection.Horizontal
+spLayout.Padding = UDim.new(0, 4)
+
+for _, presetName in ipairs({"Anime", "Space", "Sunset"}) do
+    local pBtn = Instance.new("TextButton")
+    pBtn.Parent = skyPresetRow
+    pBtn.BackgroundColor3 = (presetName == CurrentSkyPreset) and Color3.fromRGB(30, 30, 45) or Color3.fromRGB(15, 15, 22)
+    pBtn.Size = UDim2.new(0.33, -3, 1, 0)
+    pBtn.Font = Enum.Font.GothamBold
+    pBtn.Text = presetName
+    pBtn.TextColor3 = (presetName == CurrentSkyPreset) and CurrentThemeAccent or CurrentTextColor
+    pBtn.TextSize = 10
+    pBtn.ZIndex = 504
+    Instance.new("UICorner", pBtn).CornerRadius = UDim.new(0, 5)
+    
+    pBtn.MouseButton1Click:Connect(function()
+        CurrentSkyPreset = presetName
+        for _, child in ipairs(skyPresetRow:GetChildren()) do
+            if child:IsA("TextButton") then
+                child.TextColor3 = CurrentTextColor
+                child.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+            end
+        end
+        pBtn.TextColor3 = CurrentThemeAccent
+        pBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+        
+        if CustomSkyEnabled then
+            pcall(function()
+                local sky = Lighting:FindFirstChild("Zero_CustomSky")
+                if sky then
+                    if presetName == "Anime" then
+                        sky.SkyboxBk = "rbxassetid://156577171" sky.SkyboxDn = "rbxassetid://156577174" sky.SkyboxFt = "rbxassetid://156577186" sky.SkyboxLf = "rbxassetid://156577178" sky.SkyboxRt = "rbxassetid://156577196" sky.SkyboxUp = "rbxassetid://156577197"
+                    elseif presetName == "Space" then
+                        sky.SkyboxBk = "rbxassetid://153744922" sky.SkyboxDn = "rbxassetid://153744933" sky.SkyboxFt = "rbxassetid://153744949" sky.SkyboxLf = "rbxassetid://153744960" sky.SkyboxRt = "rbxassetid://153744971" sky.SkyboxUp = "rbxassetid://153744983"
+                    elseif presetName == "Sunset" then
+                        sky.SkyboxBk = "rbxassetid://60052063" sky.SkyboxDn = "rbxassetid://60052062" sky.SkyboxFt = "rbxassetid://60052064" sky.SkyboxLf = "rbxassetid://60052065" sky.SkyboxRt = "rbxassetid://60052066" sky.SkyboxUp = "rbxassetid://60052067"
+                    end
+                end
+            end)
+        end
+    end)
+end
+
+AddHeaderLabel(TabWorld, "SkyColorHeader")
+CreateGoogleColorPicker(TabWorld, CurrentSkyColor, function(newCol)
+    CurrentSkyColor = newCol
+    pcall(function()
+        local atmos = Lighting:FindFirstChild("Zero_Atmos") or Instance.new("Atmosphere")
+        atmos.Name = "Zero_Atmos"
+        atmos.Color = newCol
+        atmos.Decay = newCol
+        atmos.Density = 0.3
+        atmos.Parent = Lighting
+    end)
+end)
+
+AddHeaderLabel(TabWorld, "SkyLightingHeader")
+CreateToggle(TabWorld, "EnableSkyLighting", false, function(v)
+    SkyLightingEnabled = v
+    pcall(function()
+        if v then
+            Lighting.Ambient = CurrentSkyLightingColor
+            Lighting.OutdoorAmbient = CurrentSkyLightingColor
+        else
+            Lighting.Ambient = Color3.fromRGB(128, 128, 128)
+            Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+        end
+    end)
+end)
+
+AddHeaderLabel(TabWorld, "SkyLightingColorHeader")
+CreateGoogleColorPicker(TabWorld, CurrentSkyLightingColor, function(newCol)
+    CurrentSkyLightingColor = newCol
+    if SkyLightingEnabled then
+        pcall(function()
+            Lighting.Ambient = newCol
+            Lighting.OutdoorAmbient = newCol
+        end)
+    end
+end)
+
+AddHeaderLabel(TabWorld, "StretchHeader")
+local SliderFrame = Instance.new("Frame")
+SliderFrame.Parent = TabWorld
+SliderFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+SliderFrame.Size = UDim2.new(1, 0, 0, 46)
+SliderFrame.ZIndex = 503
+Instance.new("UICorner", SliderFrame).CornerRadius = UDim.new(0, 8)
+
+local SliderTitle = Instance.new("TextLabel")
+SliderTitle.Parent = SliderFrame
+SliderTitle.BackgroundTransparency = 1
+SliderTitle.Position = UDim2.new(0, 10, 0, 4)
+SliderTitle.Size = UDim2.new(1, -20, 0, 16)
+SliderTitle.Font = Enum.Font.GothamMedium
+SliderTitle.Text = T("StretchTitle") .. ": 100%"
+SliderTitle.TextColor3 = CurrentTextColor
+SliderTitle.TextSize = 10
+SliderTitle.TextXAlignment = Enum.TextXAlignment.Left
+SliderTitle.ZIndex = 504
+table.insert(UITextLabels, SliderTitle)
+
+local SliderTrack = Instance.new("Frame")
+SliderTrack.Parent = SliderFrame
+SliderTrack.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+SliderTrack.Position = UDim2.new(0, 10, 0, 26)
+SliderTrack.Size = UDim2.new(1, -20, 0, 10)
+SliderTrack.ZIndex = 504
+Instance.new("UICorner", SliderTrack).CornerRadius = UDim.new(1, 0)
+
+local SliderFill = Instance.new("Frame")
+SliderFill.Parent = SliderTrack
+SliderFill.BackgroundColor3 = CurrentThemeAccent
+SliderFill.Size = UDim2.new(1, 0, 1, 0)
+SliderFill.ZIndex = 505
+Instance.new("UICorner", SliderFill).CornerRadius = UDim.new(1, 0)
+table.insert(UIThemeAccents, SliderFill)
+
+local isSliding = false
+local function UpdateSlider(input)
+    local trackWidth = SliderTrack.AbsoluteSize.X
+    if trackWidth > 0 then
+        local relativeX = math.clamp(input.Position.X - SliderTrack.AbsolutePosition.X, 0, trackWidth)
+        local percentage = relativeX / trackWidth
+        StretchScale = 0.3 + (percentage * 0.7)
+        SliderFill.Size = UDim2.new(percentage, 0, 1, 0)
+        SliderTitle.Text = T("StretchTitle") .. ": " .. math.floor(percentage * 100) .. "%"
+    end
+end
+
+SliderTrack.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isSliding = true
+        TabWorld.ScrollingEnabled = false
+        UpdateSlider(input)
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if isSliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        UpdateSlider(input)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isSliding = false
+        TabWorld.ScrollingEnabled = true
+    end
+end)
+
+AddHeaderLabel(TabWorld, "ShadersHeader")
+CreateToggle(TabWorld, "EnableShaders", false, function(v)
+    pcall(function()
+        if v then
+            local cc = Lighting:FindFirstChild("Zero_CC") or Instance.new("ColorCorrectionEffect")
+            cc.Name, cc.Brightness, cc.Contrast, cc.Saturation, cc.TintColor, cc.Parent = "Zero_CC", 0.03, 0.35, 0.4, Color3.fromRGB(255, 240, 230), Lighting
+            local bloom = Lighting:FindFirstChild("Zero_Bloom") or Instance.new("BloomEffect")
+            bloom.Name, bloom.Intensity, bloom.Size, bloom.Threshold, bloom.Parent = "Zero_Bloom", 0.75, 28, 0.75, Lighting
+            Lighting.GlobalShadows = true
+        else
+            if Lighting:FindFirstChild("Zero_CC") then Lighting.Zero_CC:Destroy() end
+            if Lighting:FindFirstChild("Zero_Bloom") then Lighting.Zero_Bloom:Destroy() end
+        end
+    end)
+end)
+
+CreateToggle(TabWorld, "NightMode", false, function(v)
+    pcall(function()
+        if v then Lighting.Brightness, Lighting.ClockTime = 0.1, 0 else Lighting.Brightness, Lighting.ClockTime = 1, 12 end
+    end)
+end)
+
+-- PARTICLES TAB
+local TabParticles = CreateTabContent("ParticlesTab")
+AddHeaderLabel(TabParticles, "ParticleHeader")
+
+local function UpdatePlayerParticles()
+    pcall(function()
+        if ActiveParticleObject then
+            ActiveParticleObject:Destroy()
+            ActiveParticleObject = nil
+        end
+        if ParticlesEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = LocalPlayer.Character.HumanoidRootPart
+            if CurrentParticleType == "Sparkles" then
+                local s = Instance.new("Sparkles")
+                s.Name = "Zero_Particles"
+                s.SparkleColor = CurrentParticleColor
+                s.Parent = hrp
+                ActiveParticleObject = s
+            elseif CurrentParticleType == "Fire" then
+                local f = Instance.new("Fire")
+                f.Name = "Zero_Particles"
+                f.Color = CurrentParticleColor
+                f.SecondaryColor = Color3.fromRGB(255, 255, 255)
+                f.Size = 5
+                f.Parent = hrp
+                ActiveParticleObject = f
+            elseif CurrentParticleType == "Smoke" then
+                local sm = Instance.new("Smoke")
+                sm.Name = "Zero_Particles"
+                sm.Color = CurrentParticleColor
+                sm.Size = 2
+                sm.Opacity = 0.6
+                sm.Parent = hrp
+                ActiveParticleObject = sm
+            end
+        end
+    end)
+end
+
+CreateToggle(TabParticles, "EnableParticles", false, function(v)
+    ParticlesEnabled = v
+    UpdatePlayerParticles()
+end)
+
+AddHeaderLabel(TabParticles, "SelectParticleType")
+local particleRow = Instance.new("Frame")
+particleRow.Parent = TabParticles
+particleRow.BackgroundTransparency = 1
+particleRow.Size = UDim2.new(1, 0, 0, 28)
+particleRow.ZIndex = 503
+local pLayout = Instance.new("UIListLayout", particleRow)
+pLayout.FillDirection = Enum.FillDirection.Horizontal
+pLayout.Padding = UDim.new(0, 4)
+
+for _, pType in ipairs({"Sparkles", "Fire", "Smoke"}) do
+    local pTypeBtn = Instance.new("TextButton")
+    pTypeBtn.Parent = particleRow
+    pTypeBtn.BackgroundColor3 = (pType == CurrentParticleType) and Color3.fromRGB(30, 30, 45) or Color3.fromRGB(15, 15, 22)
+    pTypeBtn.Size = UDim2.new(0.33, -3, 1, 0)
+    pTypeBtn.Font = Enum.Font.GothamBold
+    pTypeBtn.Text = pType
+    pTypeBtn.TextColor3 = (pType == CurrentParticleType) and CurrentThemeAccent or CurrentTextColor
+    pTypeBtn.TextSize = 10
+    pTypeBtn.ZIndex = 504
+    Instance.new("UICorner", pTypeBtn).CornerRadius = UDim.new(0, 5)
+    
+    pTypeBtn.MouseButton1Click:Connect(function()
+        CurrentParticleType = pType
+        for _, child in ipairs(particleRow:GetChildren()) do
+            if child:IsA("TextButton") then
+                child.TextColor3 = CurrentTextColor
+                child.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+            end
+        end
+        pTypeBtn.TextColor3 = CurrentThemeAccent
+        pTypeBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+        UpdatePlayerParticles()
+    end)
+end
+
+AddHeaderLabel(TabParticles, "ParticleColorHeader")
+CreateGoogleColorPicker(TabParticles, CurrentParticleColor, function(newCol)
+    CurrentParticleColor = newCol
+    UpdatePlayerParticles()
+end)
+
+-- PLAYERS TAB (Игроки, телепорт, авто-телепорт к жертве со слайдером скорости)
+local TabPlayers = CreateTabContent("TeleportTab")
+AddHeaderLabel(TabPlayers, "TeleportHeader")
+local SelectedLabel = Instance.new("TextLabel")
+SelectedLabel.Parent = TabPlayers
+SelectedLabel.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
+SelectedLabel.Size = UDim2.new(1, 0, 0, 26)
+SelectedLabel.Font = Enum.Font.Gotham
+SelectedLabel.Text = T("TargetNotSelected")
+SelectedLabel.TextColor3 = CurrentTextColor
+SelectedLabel.TextSize = 10
+SelectedLabel.ZIndex = 503
+Instance.new("UICorner", SelectedLabel).CornerRadius = UDim.new(0, 6)
+table.insert(UITextLabels, SelectedLabel)
+
+local PlrScroll = Instance.new("ScrollingFrame")
+PlrScroll.Parent = TabPlayers
+PlrScroll.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+PlrScroll.Size = UDim2.new(1, 0, 0, 130)
+PlrScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+PlrScroll.ScrollBarThickness = 2
+PlrScroll.ScrollBarImageColor3 = CurrentThemeAccent
+PlrScroll.ZIndex = 503
+Instance.new("UICorner", PlrScroll).CornerRadius = UDim.new(0, 6)
+table.insert(UIThemeAccents, PlrScroll)
+
+local PlrLayout = Instance.new("UIListLayout", PlrScroll)
+PlrLayout.Padding = UDim.new(0, 4)
+
+local function PopulatePlayers()
+    for _, child in pairs(PlrScroll:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    local count = 0
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            count = count + 1
+            local pBtn = Instance.new("TextButton")
+            pBtn.Parent = PlrScroll
+            pBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+            pBtn.Size = UDim2.new(1, -4, 0, 24)
+            pBtn.Font = Enum.Font.Gotham
+            pBtn.Text = "  " .. p.DisplayName .. " (@" .. p.Name .. ")"
+            pBtn.TextColor3 = CurrentTextColor
+            pBtn.TextSize = 10
+            pBtn.TextXAlignment = Enum.TextXAlignment.Left
+            pBtn.ZIndex = 504
+            Instance.new("UICorner", pBtn).CornerRadius = UDim.new(0, 4)
+            
+            table.insert(UITextLabels, pBtn)
+            
+            pBtn.MouseButton1Click:Connect(function()
+                SelectedPlayerName = p.Name
+                SelectedLabel.Text = T("TargetSelected") .. p.Name
+            end)
+        end
+    end
+    PlrScroll.CanvasSize = UDim2.new(0, 0, 0, count * 28)
+end
+
+CreateActionBtn(TabPlayers, "RefreshList", PopulatePlayers)
+CreateActionBtn(TabPlayers, "TeleportToTarget", function()
+    if SelectedPlayerName and Players:FindFirstChild(SelectedPlayerName) then
+        local targetChar = Players[SelectedPlayerName].Character
+        if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character.HumanoidRootPart.CFrame = targetChar.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+        end
+    end
+end)
+
+CreateToggle(TabPlayers, "AutoTeleportTarget", false, function(v)
+    AutoTeleportEnabled = v
+end)
+
+-- Слайдер скорости авто-телепорта
+local TPSliderFrame = Instance.new("Frame")
+TPSliderFrame.Parent = TabPlayers
+TPSliderFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+TPSliderFrame.Size = UDim2.new(1, 0, 0, 46)
+TPSliderFrame.ZIndex = 503
+Instance.new("UICorner", TPSliderFrame).CornerRadius = UDim.new(0, 8)
+
+local TPSliderTitle = Instance.new("TextLabel")
+TPSliderTitle.Parent = TPSliderFrame
+TPSliderTitle.BackgroundTransparency = 1
+TPSliderTitle.Position = UDim2.new(0, 10, 0, 4)
+TPSliderTitle.Size = UDim2.new(1, -20, 0, 16)
+TPSliderTitle.Font = Enum.Font.GothamMedium
+TPSliderTitle.Text = T("TPSpeedTitle") .. ": Средне"
+TPSliderTitle.TextColor3 = CurrentTextColor
+TPSliderTitle.TextSize = 10
+TPSliderTitle.TextXAlignment = Enum.TextXAlignment.Left
+TPSliderTitle.ZIndex = 504
+table.insert(UITextLabels, TPSliderTitle)
+
+local TPSliderTrack = Instance.new("Frame")
+TPSliderTrack.Parent = TPSliderFrame
+TPSliderTrack.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+TPSliderTrack.Position = UDim2.new(0, 10, 0, 26)
+TPSliderTrack.Size = UDim2.new(1, -20, 0, 10)
+TPSliderTrack.ZIndex = 504
+Instance.new("UICorner", TPSliderTrack).CornerRadius = UDim.new(1, 0)
+
+local TPSliderFill = Instance.new("Frame")
+TPSliderFill.Parent = TPSliderTrack
+TPSliderFill.BackgroundColor3 = CurrentThemeAccent
+TPSliderFill.Size = UDim2.new(0.5, 0, 1, 0)
+TPSliderFill.ZIndex = 505
+Instance.new("UICorner", TPSliderFill).CornerRadius = UDim.new(1, 0)
+table.insert(UIThemeAccents, TPSliderFill)
+
+local isTPSliding = false
+local function UpdateTPSlider(input)
+    local trackWidth = TPSliderTrack.AbsoluteSize.X
+    if trackWidth > 0 then
+        local relativeX = math.clamp(input.Position.X - TPSliderTrack.AbsolutePosition.X, 0, trackWidth)
+        local percentage = relativeX / trackWidth
+        TeleportChaseSpeed = 0.05 + (percentage * 0.95)
+        TPSliderFill.Size = UDim2.new(percentage, 0, 1, 0)
+        TPSliderTitle.Text = T("TPSpeedTitle") .. ": " .. math.floor(percentage * 100) .. "%"
+    end
+end
+
+TPSliderTrack.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isTPSliding = true
+        TabPlayers.ScrollingEnabled = false
+        UpdateTPSlider(input)
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if isTPSliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        UpdateTPSlider(input)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isTPSliding = false
+        TabPlayers.ScrollingEnabled = true
+    end
+end)
+
+PopulatePlayers()
+
+-- MUSIC TAB
+local TabMusic = CreateTabContent("MusicTab")
+AddHeaderLabel(TabMusic, "MusicHeader")
+
+local MusicInput = Instance.new("TextBox")
+MusicInput.Parent = TabMusic
+MusicInput.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+MusicInput.Size = UDim2.new(1, 0, 0, 32)
+MusicInput.Font = Enum.Font.GothamMedium
+MusicInput.PlaceholderText = T("MusicPlaceholder")
+MusicInput.Text = ""
+MusicInput.TextColor3 = CurrentTextColor
+MusicInput.TextSize = 10
+MusicInput.ZIndex = 503
+Instance.new("UICorner", MusicInput).CornerRadius = UDim.new(0, 8)
+table.insert(UITextLabels, MusicInput)
+
+CreateActionBtn(TabMusic, "PlayMusic", function()
+    local text = MusicInput.Text
+    if text ~= "" then
+        pcall(function()
+            local soundId = text
+            if tonumber(text) then soundId = "rbxassetid://" .. text end
+            if GlobalBoomboxSound.SoundId ~= soundId then GlobalBoomboxSound.SoundId = soundId end
+            if GlobalBoomboxSound.IsPlaying then GlobalBoomboxSound:Pause() else GlobalBoomboxSound:Play() end
+        end)
+    end
+end)
+
+CreateActionBtn(TabMusic, "StopMusic", function()
+    pcall(function() GlobalBoomboxSound:Stop() end)
+end)
+
+local VolSliderFrame = Instance.new("Frame")
+VolSliderFrame.Parent = TabMusic
+VolSliderFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+VolSliderFrame.Size = UDim2.new(1, 0, 0, 46)
+VolSliderFrame.ZIndex = 503
+Instance.new("UICorner", VolSliderFrame).CornerRadius = UDim.new(0, 8)
+
+local VolSliderTitle = Instance.new("TextLabel")
+VolSliderTitle.Parent = VolSliderFrame
+VolSliderTitle.BackgroundTransparency = 1
+VolSliderTitle.Position = UDim2.new(0, 10, 0, 4)
+VolSliderTitle.Size = UDim2.new(1, -20, 0, 16)
+VolSliderTitle.Font = Enum.Font.GothamMedium
+VolSliderTitle.Text = T("VolumeTitle") .. ": 50%"
+VolSliderTitle.TextColor3 = CurrentTextColor
+VolSliderTitle.TextSize = 10
+VolSliderTitle.TextXAlignment = Enum.TextXAlignment.Left
+VolSliderTitle.ZIndex = 504
+table.insert(UITextLabels, VolSliderTitle)
+
+local VolSliderTrack = Instance.new("Frame")
+VolSliderTrack.Parent = VolSliderFrame
+VolSliderTrack.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+VolSliderTrack.Position = UDim2.new(0, 10, 0, 26)
+VolSliderTrack.Size = UDim2.new(1, -20, 0, 10)
+VolSliderTrack.ZIndex = 504
+Instance.new("UICorner", VolSliderTrack).CornerRadius = UDim.new(1, 0)
+
+local VolSliderFill = Instance.new("Frame")
+VolSliderFill.Parent = VolSliderTrack
+VolSliderFill.BackgroundColor3 = CurrentThemeAccent
+VolSliderFill.Size = UDim2.new(0.5, 0, 1, 0)
+VolSliderFill.ZIndex = 505
+Instance.new("UICorner", VolSliderFill).CornerRadius = UDim.new(1, 0)
+table.insert(UIThemeAccents, VolSliderFill)
+
+local isVolSliding = false
+local function UpdateVolSlider(input)
+    local trackWidth = VolSliderTrack.AbsoluteSize.X
+    if trackWidth > 0 then
+        local relativeX = math.clamp(input.Position.X - VolSliderTrack.AbsolutePosition.X, 0, trackWidth)
+        local percentage = relativeX / trackWidth
+        GlobalBoomboxSound.Volume = percentage
+        VolSliderFill.Size = UDim2.new(percentage, 0, 1, 0)
+        VolSliderTitle.Text = T("VolumeTitle") .. ": " .. math.floor(percentage * 100) .. "%"
+    end
+end
+
+VolSliderTrack.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isVolSliding = true
+        TabMusic.ScrollingEnabled = false
+        UpdateVolSlider(input)
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if isVolSliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        UpdateVolSlider(input)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isVolSliding = false
+        TabMusic.ScrollingEnabled = true
+    end
+end)
+
+AddHeaderLabel(TabMusic, "PresetsHeader")
+local presetsRow = Instance.new("Frame")
+presetsRow.Parent = TabMusic
+presetsRow.BackgroundTransparency = 1
+presetsRow.Size = UDim2.new(1, 0, 0, 28)
+presetsRow.ZIndex = 503
+local prLayout = Instance.new("UIListLayout", presetsRow)
+prLayout.FillDirection = Enum.FillDirection.Horizontal
+prLayout.Padding = UDim.new(0, 4)
+
+local musicPresets = {
+    {Name="Phonk 1", ID="1848354536"},
+    {Name="Phonk 2", ID="1423760888"},
+    {Name="Banger", ID="9047094060"}
+}
+
+for _, pData in ipairs(musicPresets) do
+    local pBtn = Instance.new("TextButton")
+    pBtn.Parent = presetsRow
+    pBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+    pBtn.Size = UDim2.new(0.33, -3, 1, 0)
+    pBtn.Font = Enum.Font.GothamBold
+    pBtn.Text = pData.Name
+    pBtn.TextColor3 = CurrentThemeAccent
+    pBtn.TextSize = 9
+    pBtn.ZIndex = 504
+    Instance.new("UICorner", pBtn).CornerRadius = UDim.new(0, 5)
+    table.insert(UIThemeAccents, pBtn)
+    
+    pBtn.MouseButton1Click:Connect(function()
+        MusicInput.Text = pData.ID
+    end)
+end
+
+-- CONFIGS TAB
+local TabConfigs = CreateTabContent("ConfigTab")
+AddHeaderLabel(TabConfigs, "ConfigHeader")
+
+local ConfigInput = Instance.new("TextBox")
+ConfigInput.Parent = TabConfigs
+ConfigInput.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+ConfigInput.Size = UDim2.new(1, 0, 0, 32)
+ConfigInput.Font = Enum.Font.GothamMedium
+ConfigInput.PlaceholderText = T("ConfigPlaceholder")
+ConfigInput.Text = "default"
+ConfigInput.TextColor3 = CurrentTextColor
+ConfigInput.TextSize = 11
+ConfigInput.ZIndex = 503
+Instance.new("UICorner", ConfigInput).CornerRadius = UDim.new(0, 8)
+table.insert(UITextLabels, ConfigInput)
+
+local SelectedConfigLabel = Instance.new("TextLabel")
+SelectedConfigLabel.Parent = TabConfigs
+SelectedConfigLabel.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
+SelectedConfigLabel.Size = UDim2.new(1, 0, 0, 24)
+SelectedConfigLabel.Font = Enum.Font.Gotham
+SelectedConfigLabel.Text = "Выбранный конфиг: нет"
+SelectedConfigLabel.TextColor3 = Color3.fromRGB(160, 160, 180)
+SelectedConfigLabel.TextSize = 10
+SelectedConfigLabel.ZIndex = 503
+Instance.new("UICorner", SelectedConfigLabel).CornerRadius = UDim.new(0, 6)
+
+local ConfigScroll = Instance.new("ScrollingFrame")
+ConfigScroll.Parent = TabConfigs
+ConfigScroll.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+ConfigScroll.Size = UDim2.new(1, 0, 0, 120)
+ConfigScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+ConfigScroll.ScrollBarThickness = 2
+ConfigScroll.ScrollBarImageColor3 = CurrentThemeAccent
+ConfigScroll.ZIndex = 503
+Instance.new("UICorner", ConfigScroll).CornerRadius = UDim.new(0, 6)
+table.insert(UIThemeAccents, ConfigScroll)
+
+local ConfigLayout = Instance.new("UIListLayout", ConfigScroll)
+ConfigLayout.Padding = UDim.new(0, 4)
+
+local function GetConfigData()
+    return {
+        AimbotEnabled = AimbotEnabled,
+        WallCheckEnabled = WallCheckEnabled,
+        AimbotSpeedMode = AimbotSpeedMode,
+        AimbotTargetBone = AimbotTargetBone,
+        UseFOVCircle = UseFOVCircle,
+        FOVRadius = FOVRadius,
+        TriggerBotEnabled = TriggerBotEnabled,
+        SpinBotEnabled = SpinBotEnabled,
+        FlyEnabled = FlyEnabled,
+        FlySpeed = FlySpeed,
+        InfJumpEnabled = InfJumpEnabled,
+        BHopEnabled = BHopEnabled,
+        AntiKnockbackEnabled = AntiKnockbackEnabled,
+        AntiFlingEnabled = AntiFlingEnabled,
+        ESPEnabled = ESPEnabled,
+        ESPNamesEnabled = ESPNamesEnabled,
+        NoClipEnabled = NoClipEnabled,
+        CurrentLang = CurrentLang,
+        StretchScale = StretchScale,
+        MusicCode = MusicInput.Text,
+        MusicVolume = GlobalBoomboxSound.Volume,
+        WorldColorEnabled = WorldColorEnabled,
+        ParticlesEnabled = ParticlesEnabled,
+        CurrentParticleType = CurrentParticleType
+    }
+end
+
+local function ApplyConfigData(data)
+    if not data then return end
+    AimbotEnabled = data.AimbotEnabled or false
+    WallCheckEnabled = data.WallCheckEnabled ~= nil and data.WallCheckEnabled or true
+    AimbotSpeedMode = data.AimbotSpeedMode or "Smooth"
+    AimbotTargetBone = data.AimbotTargetBone or "Head"
+    UseFOVCircle = data.UseFOVCircle ~= nil and data.UseFOVCircle or true
+    TriggerBotEnabled = data.TriggerBotEnabled or false
+    SpinBotEnabled = data.SpinBotEnabled or false
+    FlyEnabled = data.FlyEnabled or false
+    InfJumpEnabled = data.InfJumpEnabled or false
+    BHopEnabled = data.BHopEnabled or false
+    AntiKnockbackEnabled = data.AntiKnockbackEnabled or false
+    AntiFlingEnabled = data.AntiFlingEnabled or false
+    ESPEnabled = data.ESPEnabled or false
+    ESPNamesEnabled = data.ESPNamesEnabled ~= nil and data.ESPNamesEnabled or true
+    NoClipEnabled = data.NoClipEnabled or false
+    StretchScale = data.StretchScale or 1.0
+    if data.MusicCode then MusicInput.Text = data.MusicCode end
+    if data.MusicVolume then GlobalBoomboxSound.Volume = data.MusicVolume end
+    WorldColorEnabled = data.WorldColorEnabled or false
+    ParticlesEnabled = data.ParticlesEnabled or false
+    if data.CurrentParticleType then CurrentParticleType = data.CurrentParticleType end
+    UpdatePlayerParticles()
+end
+
+local function PopulateConfigs()
+    for _, child in pairs(ConfigScroll:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    local files = listfiles(ConfigFolder)
+    local count = 0
+    for _, filePath in ipairs(files) do
+        if filePath:match("%.json$") then
+            count = count + 1
+            local fileName = filePath:match("([^/]+)$"):gsub("%.json$", "")
+            local cBtn = Instance.new("TextButton")
+            cBtn.Parent = ConfigScroll
+            cBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+            cBtn.Size = UDim2.new(1, -4, 0, 24)
+            cBtn.Font = Enum.Font.Gotham
+            cBtn.Text = "  📁 " .. fileName
+            cBtn.TextColor3 = CurrentTextColor
+            cBtn.TextSize = 10
+            cBtn.TextXAlignment = Enum.TextXAlignment.Left
+            cBtn.ZIndex = 504
+            Instance.new("UICorner", cBtn).CornerRadius = UDim.new(0, 4)
+            table.insert(UITextLabels, cBtn)
+            
+            cBtn.MouseButton1Click:Connect(function()
+                SelectedConfigName = fileName
+                ConfigInput.Text = fileName
+                SelectedConfigLabel.Text = "Выбран конфиг: " .. fileName
+            end)
+        end
+    end
+    ConfigScroll.CanvasSize = UDim2.new(0, 0, 0, count * 28)
+end
+
+CreateActionBtn(TabConfigs, "SaveConfig", function()
+    local name = ConfigInput.Text
+    if name ~= "" then
+        pcall(function()
+            local data = GetConfigData()
+            local encoded = HttpService:JSONEncode(data)
+            writefile(ConfigFolder .. "/" .. name .. ".json", encoded)
+            PopulateConfigs()
+            SelectedConfigName = name
+            SelectedConfigLabel.Text = "Сохранен: " .. name
+        end)
+    end
+end)
+
+CreateActionBtn(TabConfigs, "LoadConfig", function()
+    local name = SelectedConfigName or ConfigInput.Text
+    if name ~= "" then
+        pcall(function()
+            local path = ConfigFolder .. "/" .. name .. ".json"
+            if isfile(path) then
+                local content = readfile(path)
+                local data = HttpService:JSONDecode(content)
+                ApplyConfigData(data)
+                SelectedConfigLabel.Text = "Загружен: " .. name
+            end
+        end)
+    end
+end)
+
+CreateActionBtn(TabConfigs, "DeleteConfig", function()
+    local name = SelectedConfigName or ConfigInput.Text
+    if name ~= "" then
+        pcall(function()
+            local path = ConfigFolder .. "/" .. name .. ".json"
+            if isfile(path) then
+                delfile(path)
+                PopulateConfigs()
+                SelectedConfigLabel.Text = "Удален: " .. name
+            end
+        end)
+    end
+end)
+
+PopulateConfigs()
+
+-- SETTINGS TAB
+local TabSettings = CreateTabContent("SettingsTab")
+
+AddHeaderLabel(TabSettings, "UtilsHeader")
+CreateActionBtn(TabSettings, "Rejoin", function()
+    TeleportService:Teleport(game.PlaceId, LocalPlayer)
+end)
+
+CreateActionBtn(TabSettings, "ServerHop", function()
+    pcall(function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end)
+end)
+
+CreateToggle(TabSettings, "AntiAFK", true, function(v)
+    if v then
+        LocalPlayer.Idled:Connect(function()
+            local VirtualUser = game:GetService("VirtualUser")
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
+    end
+end)
+
+AddHeaderLabel(TabSettings, "LangHeader")
+local langGrid = Instance.new("Frame")
+langGrid.Parent = TabSettings
+langGrid.BackgroundTransparency = 1
+langGrid.Size = UDim2.new(1, 0, 0, 32)
+langGrid.ZIndex = 503
+local lgLayout = Instance.new("UIListLayout", langGrid)
+lgLayout.FillDirection = Enum.FillDirection.Horizontal
+lgLayout.Padding = UDim.new(0, 4)
+
+local languages = {
+    {Code="RU", Name="🇷🇺 RU"},
+    {Code="EN", Name="🇬🇧 EN"}
+}
+
+local function UpdateLanguage(newLang)
+    CurrentLang = newLang
+    HeaderTitle.Text = T("Title")
+    SelectedLabel.Text = SelectedPlayerName and (T("TargetSelected") .. SelectedPlayerName) or T("TargetNotSelected")
+    
+    for _, item in ipairs(TranslationElements) do
+        if item.Obj and (item.Obj:IsA("TextLabel") or item.Obj:IsA("TextButton")) then
+            item.Obj.Text = T(item.Key)
+        end
+    end
+    
+    for key, btn in pairs(TabButtons) do
+        if key == "CombatTab" then btn.Text = T("TabCombat")
+        elseif key == "VisualsTab" then btn.Text = T("TabVisuals")
+        elseif key == "MovementTab" then btn.Text = T("TabMovement")
+        elseif key == "WorldTab" then btn.Text = T("TabWorld")
+        elseif key == "ParticlesTab" then btn.Text = T("TabParticles")
+        elseif key == "TeleportTab" then btn.Text = T("TabPlayers")
+        elseif key == "MusicTab" then btn.Text = T("TabMusic")
+        elseif key == "ConfigTab" then btn.Text = T("TabConfigs")
+        elseif key == "SettingsTab" then btn.Text = T("TabSettings")
+        end
+    end
+end
+
+for _, lData in ipairs(languages) do
+    local lBtn = Instance.new("TextButton")
+    lBtn.Parent = langGrid
+    lBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+    lBtn.Size = UDim2.new(0.5, -2, 1, 0)
+    lBtn.Font = Enum.Font.GothamBold
+    lBtn.Text = lData.Name
+    lBtn.TextColor3 = CurrentTextColor
+    lBtn.TextSize = 10
+    lBtn.ZIndex = 504
+    Instance.new("UICorner", lBtn).CornerRadius = UDim.new(0, 5)
+    
+    table.insert(UITextLabels, lBtn)
+    
+    lBtn.MouseButton1Click:Connect(function()
+        UpdateLanguage(lData.Code)
+    end)
+end
+
+-- ACCENT COLOR PICKER
+AddHeaderLabel(TabSettings, "UIThemeHeader")
+CreateGoogleColorPicker(TabSettings, CurrentThemeAccent, function(newCol)
+    CurrentThemeAccent = newCol
+    for _, elem in ipairs(UIThemeAccents) do
+        if elem:IsA("TextLabel") or elem:IsA("TextButton") then
+            elem.TextColor3 = newCol
+        elseif elem:IsA("UIStroke") then
+            elem.Color = newCol
+        elseif elem:IsA("Frame") or elem:IsA("ScrollingFrame") then
+            if elem.Name == "SliderFill" then elem.BackgroundColor3 = newCol end
+            if elem:IsA("ScrollingFrame") then elem.ScrollBarImageColor3 = newCol end
+        end
+    end
+    FOVStroke.Color = newCol
+end)
+
+-- TEXT COLOR PICKER
+AddHeaderLabel(TabSettings, "UITextColorHeader")
+CreateGoogleColorPicker(TabSettings, CurrentTextColor, function(newCol)
+    CurrentTextColor = newCol
+    for _, label in ipairs(UITextLabels) do
+        if label and (label:IsA("TextLabel") or label:IsA("TextButton")) then
+            label.TextColor3 = newCol
+        end
+    end
+end)
+
+-- MENU BACKGROUND COLOR PICKER & TRANSPARENCY
+AddHeaderLabel(TabSettings, "MenuBGHeader")
+CreateGoogleColorPicker(TabSettings, CurrentMenuBGColor, function(newCol)
+    CurrentMenuBGColor = newCol
+    MainFrame.BackgroundColor3 = newCol
+end)
+
+local BGTransFrame = Instance.new("Frame")
+BGTransFrame.Parent = TabSettings
+BGTransFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+BGTransFrame.Size = UDim2.new(1, 0, 0, 46)
+BGTransFrame.ZIndex = 503
+Instance.new("UICorner", BGTransFrame).CornerRadius = UDim.new(0, 8)
+
+local BGTransTitle = Instance.new("TextLabel")
+BGTransTitle.Parent = BGTransFrame
+BGTransTitle.BackgroundTransparency = 1
+BGTransTitle.Position = UDim2.new(0, 10, 0, 4)
+BGTransTitle.Size = UDim2.new(1, -20, 0, 16)
+BGTransTitle.Font = Enum.Font.GothamMedium
+BGTransTitle.Text = T("MenuBGTransparency") .. ": 0%"
+BGTransTitle.TextColor3 = CurrentTextColor
+BGTransTitle.TextSize = 10
+BGTransTitle.TextXAlignment = Enum.TextXAlignment.Left
+BGTransTitle.ZIndex = 504
+table.insert(UITextLabels, BGTransTitle)
+
+local BGTransTrack = Instance.new("Frame")
+BGTransTrack.Parent = BGTransFrame
+BGTransTrack.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+BGTransTrack.Position = UDim2.new(0, 10, 0, 26)
+BGTransTrack.Size = UDim2.new(1, -20, 0, 10)
+BGTransTrack.ZIndex = 504
+Instance.new("UICorner", BGTransTrack).CornerRadius = UDim.new(1, 0)
+
+local BGTransFill = Instance.new("Frame")
+BGTransFill.Parent = BGTransTrack
+BGTransFill.BackgroundColor3 = CurrentThemeAccent
+BGTransFill.Size = UDim2.new(0, 0, 1, 0)
+BGTransFill.ZIndex = 505
+Instance.new("UICorner", BGTransFill).CornerRadius = UDim.new(1, 0)
+table.insert(UIThemeAccents, BGTransFill)
+
+local isBGTransSliding = false
+local function UpdateBGTrans(input)
+    local w = BGTransTrack.AbsoluteSize.X
+    if w > 0 then
+        local relX = math.clamp(input.Position.X - BGTransTrack.AbsolutePosition.X, 0, w)
+        local percentage = relX / w
+        MenuBGTransparency = percentage * 0.85
+        MainFrame.BackgroundTransparency = MenuBGTransparency
+        BGTransFill.Size = UDim2.new(percentage, 0, 1, 0)
+        BGTransTitle.Text = T("MenuBGTransparency") .. ": " .. math.floor(percentage * 100) .. "%"
+    end
+end
+
+BGTransTrack.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isBGTransSliding = true
+        TabSettings.ScrollingEnabled = false
+        UpdateBGTrans(input)
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if isBGTransSliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        UpdateBGTrans(input)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isBGTransSliding = false
+        TabSettings.ScrollingEnabled = true
+    end
+end)
+
+local function SwitchTab(tabName)
+    for name, tabObj in pairs(Tabs) do
+        tabObj.Visible = (name == tabName)
+    end
+end
+
+local function CreateTabButton(name, translationKey)
+    local btn = Instance.new("TextButton")
+    btn.Parent = Sidebar
+    btn.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+    btn.Size = UDim2.new(1, -10, 0, 24)
+    btn.Font = Enum.Font.GothamBold
+    btn.Text = T(translationKey)
+    btn.TextColor3 = Color3.fromRGB(180, 180, 200)
+    btn.TextSize = 8
+    btn.ZIndex = 502
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    
+    TabButtons[name] = btn
+    
+    btn.MouseButton1Click:Connect(function()
+        for _, child in pairs(Sidebar:GetChildren()) do
+            if child:IsA("TextButton") then child.TextColor3 = Color3.fromRGB(180, 180, 200) end
+        end
+        btn.TextColor3 = CurrentThemeAccent
+        SwitchTab(name)
+    end)
+    return btn
+end
+
+CreateTabButton("CombatTab", "TabCombat")
+CreateTabButton("VisualsTab", "TabVisuals")
+CreateTabButton("MovementTab", "TabMovement")
+CreateTabButton("WorldTab", "TabWorld")
+CreateTabButton("ParticlesTab", "TabParticles")
+CreateTabButton("TeleportTab", "TabPlayers")
+CreateTabButton("MusicTab", "TabMusic")
+CreateTabButton("ConfigTab", "TabConfigs")
+CreateTabButton("SettingsTab", "TabSettings")
+
+SwitchTab("CombatTab")
+Sidebar:GetChildren()[2].TextColor3 = CurrentThemeAccent
+
+local function IsVisible(targetPart, targetCharacter)
+    if not WallCheckEnabled then return true end
+    if not targetPart or not LocalPlayer.Character then return false end
+    
+    local origin = Camera.CFrame.Position
+    local direction = targetPart.Position - origin
+    
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
+    raycastParams.IgnoreWater = true
+    
+    local result = Workspace:Raycast(origin, direction, raycastParams)
+    if result then return result.Instance:IsDescendantOf(targetCharacter) end
+    return true
+end
+
+local function CreateNameTag(player)
+    pcall(function()
+        if not player.Character or not player.Character:FindFirstChild("Head") then return end
+        local head = player.Character.Head
+        
+        if head:FindFirstChild("Zero_NameTag") then head.Zero_NameTag:Destroy() end
+        
+        local bb = Instance.new("BillboardGui")
+        bb.Name = "Zero_NameTag"
+        bb.Adornee = head
+        bb.Size = UDim2.new(0, 160, 0, 40)
+        bb.StudsOffset = Vector3.new(0, 2.2, 0)
+        bb.AlwaysOnTop = true
+        bb.ZIndexBehavior = Enum.ZIndexBehavior.Global
+        bb.Parent = head
+        
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Name = "NameLbl"
+        nameLabel.Parent = bb
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Size = UDim2.new(1, 0, 0, 18)
+        nameLabel.Font = Enum.Font.GothamBold
+        nameLabel.Text = player.DisplayName .. " (@" .. player.Name .. ")"
+        nameLabel.TextColor3 = CurrentESPColor
+        nameLabel.TextSize = 11
+        nameLabel.TextStrokeTransparency = 0.4
+        
+        local distLabel = Instance.new("TextLabel")
+        distLabel.Name = "DistLbl"
+        distLabel.Parent = bb
+        distLabel.BackgroundTransparency = 1
+        distLabel.Position = UDim2.new(0, 0, 0, 18)
+        distLabel.Size = UDim2.new(1, 0, 0, 14)
+        distLabel.Font = Enum.Font.Gotham
+        distLabel.Text = "0m | HP: 100"
+        distLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+        distLabel.TextSize = 9
+        distLabel.TextStrokeTransparency = 0.5
+        
+        ESPNameTags[player.Name] = bb
+    end)
+end
+
+UserInputService.JumpRequest:Connect(function()
+    if InfJumpEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        if Camera and StretchScale ~= 1.0 then
+            Camera.CFrame = Camera.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, StretchScale, 0, 0, 0, 1)
+        end
+        
+        if FOVGuiFrame.Visible then
+            FOVGuiFrame.Position = UDim2.new(0, Camera.ViewportSize.X / 2, 0, Camera.ViewportSize.Y / 2)
+            FOVGuiFrame.Size = UDim2.new(0, FOVRadius * 2, 0, FOVRadius * 2)
+        end
+        
+        if ESPNamesEnabled then
+            local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            for _, p in pairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+                    if not p.Character.Head:FindFirstChild("Zero_NameTag") then CreateNameTag(p) end
+                    local bb = p.Character.Head:FindFirstChild("Zero_NameTag")
+                    if bb and myRoot then
+                        local dist = math.floor((p.Character.Head.Position - myRoot.Position).Magnitude)
+                        local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                        local hp = hum and math.floor(hum.Health) or 0
+                        local distLbl = bb:FindFirstChild("DistLbl")
+                        local nameLbl = bb:FindFirstChild("NameLbl")
+                        if nameLbl then nameLbl.TextColor3 = CurrentESPColor end
+                        if distLbl then distLbl.Text = dist .. "m | HP: " .. hp end
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+RunService.Stepped:Connect(function()
+    pcall(function()
+        -- Авто-телепорт к выбранной жертве с настраиваемой скоростью погони
+        if AutoTeleportEnabled and SelectedPlayerName and Players:FindFirstChild(SelectedPlayerName) then
+            local targetChar = Players[SelectedPlayerName].Character
+            if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local myRoot = LocalPlayer.Character.HumanoidRootPart
+                local targetRoot = targetChar.HumanoidRootPart
+                local goalCFrame = targetRoot.CFrame * CFrame.new(0, 0, 3)
+                myRoot.CFrame = myRoot.CFrame:Lerp(goalCFrame, TeleportChaseSpeed)
+            end
+        end
+
+        if NoClipEnabled and LocalPlayer.Character then
+            for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+        end
+
+        if AntiKnockbackEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = LocalPlayer.Character.HumanoidRootPart
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hrp and hum then
+                local currentVel = hrp.Velocity
+                if currentVel.Magnitude > 60 then
+                    hrp.Velocity = Vector3.new(currentVel.X * 0.1, math.clamp(currentVel.Y, -20, 30), currentVel.Z * 0.1)
+                end
+            end
+        end
+
+        if AntiFlingEnabled then
+            for _, p in pairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character then
+                    for _, part in pairs(p.Character:GetDescendants()) do
+                        if part:IsA("BasePart") then part.CanCollide = false end
+                    end
+                end
+            end
+        end
+
+        if FlyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local char = LocalPlayer.Character
+            local hrp = char.HumanoidRootPart
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            
+            if hum then hum.PlatformStand = true end
+            
+            if not BodyVelocity or BodyVelocity.Parent ~= hrp then
+                if BodyVelocity then BodyVelocity:Destroy() end
+                BodyVelocity = Instance.new("BodyVelocity")
+                BodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+                BodyVelocity.Velocity = Vector3.zero
+                BodyVelocity.Parent = hrp
+            end
+            
+            local camCFrame = Camera.CFrame
+            local moveDir = hum and hum.MoveDirection or Vector3.zero
+            
+            if moveDir.Magnitude > 0 then
+                local flatLook = Vector3.new(camCFrame.LookVector.X, 0, camCFrame.LookVector.Z).Unit
+                local flatRight = Vector3.new(camCFrame.RightVector.X, 0, camCFrame.RightVector.Z).Unit
+                local flyDir = (flatRight * moveDir.X + flatLook * moveDir.Z).Unit
+                BodyVelocity.Velocity = flyDir * FlySpeed + Vector3.new(0, moveDir.Y * FlySpeed, 0)
+            else
+                BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            end
+        elseif not FlyEnabled then
+            if BodyVelocity then BodyVelocity:Destroy() BodyVelocity = nil end
+            if LocalPlayer.Character then
+                local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if hum and hum.PlatformStand then hum.PlatformStand = false end
+            end
+        end
+
+        if BHopEnabled and LocalPlayer.Character then
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.MoveDirection.Magnitude > 0 and hum.FloorMaterial ~= Enum.Material.Air then
+                hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end
+
+        if SpinBotEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.Angles(0, math.rad(SpinSpeed), 0)
+        end
+        
+        if AimbotEnabled then
+            local closestTarget = nil
+            local shortestDist = math.huge
+            local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+            
+            for _, p in pairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character then
+                    local targetPart = p.Character:FindFirstChild(AimbotTargetBone) or p.Character:FindFirstChild("HumanoidRootPart")
+                    if targetPart and IsVisible(targetPart, p.Character) then
+                        local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+                        if onScreen then
+                            local mouseDist = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
+                            if (not UseFOVCircle) or (mouseDist <= FOVRadius) then
+                                if mouseDist < shortestDist then
+                                    shortestDist = mouseDist
+                                    closestTarget = targetPart
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            
+            if closestTarget then
+                local targetCFrame = CFrame.new(Camera.CFrame.Position, closestTarget.Position)
+                if AimbotSpeedMode == "Fast" then Camera.CFrame = targetCFrame
+                elseif AimbotSpeedMode == "Smooth" then Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, 0.25)
+                elseif AimbotSpeedMode == "Slow" then Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, 0.08) end
+                
+                if TriggerBotEnabled and (tick() - LastTriggerTime > 0.2) then
+                    LastTriggerTime = tick()
+                    pcall(function()
+                        VirtualInputManager:SendMouseButtonEvent(screenCenter.X, screenCenter.Y, 0, true, game, 1)
+                        task.spawn(function()
+                            task.wait(0.04)
+                            VirtualInputManager:SendMouseButtonEvent(screenCenter.X, screenCenter.Y, 0, false, game, 1)
+                        end)
+                    end)
+                end
+            end
+        end
+        
+        if ESPEnabled then
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    local hl = player.Character:FindFirstChild("Zero_Highlight") or Instance.new("Highlight")
+                    hl.Name = "Zero_Highlight"
+                    hl.FillColor = CurrentESPColor
+                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    hl.FillTransparency = 0.5
+                    hl.Adornee = player.Character
+                    hl.Parent = player.Character
+                    ESPHighlights[player.Name] = hl
+                end
+            end
+        end
+    end)
+end)
